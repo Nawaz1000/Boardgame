@@ -1,53 +1,122 @@
 # BoardgameListingWebApp
-
+A full-stack Java-based web application to manage and review board games with role-based access. Built using Spring
+Boot and deployed using Azure DevOps pipelines and Kubernetes.
 ## Description
+This application allows users to browse a list of board games and their reviews.
+### Role Permissions:
+- **Non-members**: Can view games and reviews.
+- **Users**: Can add games and write reviews.
+- **Managers**: Can edit and delete reviews.
+## Technologies Used
+- **Backend**: Java, Spring Boot, Spring MVC, Spring Security, JDBC
+- **Frontend**: Thymeleaf, HTML5, CSS, JavaScript, Bootstrap
+- **Database**: H2 (In-memory) with custom `schema.sql`
+- **Testing**: JUnit
+- **Build Tool**: Maven
+- **CI/CD**: Azure DevOps (Classic Pipelines)
+- **Security**: Trivy for vulnerability scanning
+- **Code Quality**: SonarQube
+- **Containerization**: Docker
+- **Deployment**: Azure Kubernetes Service (AKS), optional AWS EC2
 
-**Board Game Database Full-Stack Web Application.**
-This web application displays lists of board games and their reviews. While anyone can view the board game lists and reviews, they are required to log in to add/ edit the board games and their reviews. The 'users' have the authority to add board games to the list and add reviews, and the 'managers' have the authority to edit/ delete the reviews on top of the authorities of users.  
-
-## Technologies
-
-- Java
-- Spring Boot
-- Amazon Web Services(AWS) EC2
-- Thymeleaf
-- Thymeleaf Fragments
-- HTML5
-- CSS
-- JavaScript
-- Spring MVC
-- JDBC
-- H2 Database Engine (In-memory)
-- JUnit test framework
-- Spring Security
-- Twitter Bootstrap
-- Maven
-
-## Features
-
-- Full-Stack Application
-- UI components created with Thymeleaf and styled with Twitter Bootstrap
-- Authentication and authorization using Spring Security
-  - Authentication by allowing the users to authenticate with a username and password
-  - Authorization by granting different permissions based on the roles (non-members, users, and managers)
-- Different roles (non-members, users, and managers) with varying levels of permissions
-  - Non-members only can see the boardgame lists and reviews
-  - Users can add board games and write reviews
-  - Managers can edit and delete the reviews
-- Deployed the application on AWS EC2
-- JUnit test framework for unit testing
-- Spring MVC best practices to segregate views, controllers, and database packages
-- JDBC for database connectivity and interaction
-- CRUD (Create, Read, Update, Delete) operations for managing data in the database
-- Schema.sql file to customize the schema and input initial data
-- Thymeleaf Fragments to reduce redundancy of repeating HTML elements (head, footer, navigation)
-
-## How to Run
-
-1. Clone the repository
-2. Open the project in your IDE of choice
-3. Run the application
-4. To use initial user data, use the following credentials.
-  - username: bugs    |     password: bunny (user role)
-  - username: daffy   |     password: duck  (manager role)
-5. You can also sign-up as a new user and customize your role to play with the application! 😊
+- ## Features
+- Role-based access with Spring Security
+- Full CRUD operations for games and reviews
+- Authentication with username/password
+- Reusable layouts with Thymeleaf Fragments
+- CI/CD with automated scanning and analysis
+- Kubernetes deployment with Ingress exposure
+## How to Set Up & Deploy Using Azure DevOps
+### Step 1: Import Repository
+- Import this project into your Azure DevOps Repos.
+### Step 2: Create a Build Pipeline (Classic Editor)
+1. Go to **Pipelines > New Pipeline > Classic Editor**.
+2. Select your repo.
+3. Choose either:
+ - Microsoft-hosted agent (simpler setup)
+ - Self-hosted agent (for advanced control see next step)
+### Step 3: Set Up a Self-hosted Agent (Optional)
+1. Go to **Organization Settings > Pipelines > Agent Pools**.
+2. Create a new agent pool.
+3. In that pool, click **New Agent**, and follow install instructions based on OS.
+4. On your VM:
+ ```bash
+ mkdir myagent && cd myagent
+ wget https://vstsagentpackage.azureedge.net/agent/your-version.tar.gz
+ tar zxvf your-version.tar.gz
+ ./config.sh
+ ./svc.sh install
+ ./svc.sh start
+ ```
+5. Ensure the agent is online in Azure DevOps.
+6. Add capabilities:
+ - `JAVA=true`
+ - `MAVEN=true`
+### Step 4: Install Required Tools on Agent VM
+```bash
+sudo apt update
+sudo apt install openjdk-17-jdk maven -y
+sudo apt install docker.io -y
+sudo usermod -aG docker $USER
+wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.50.1_Linux-64bit.deb
+sudo dpkg -i trivy_0.50.1_Linux-64bit.deb
+```
+### Step 5: Deploy AKS Kubernetes Cluster
+1. Go to Azure Portal > **Kubernetes Services** > Create.
+2. Settings:
+ - Node count: min 1, max 30
+ - VM size: D2s v3
+ - Disable alerts
+### Step 6: Create Release Pipeline
+1. Go to **Pipelines > Releases > New Pipeline**.
+2. Add an **Artifact** from the build output.
+3. Create an **empty job** and configure tasks:
+ ```bash
+ kubectl apply -f deployment.yaml
+ kubectl apply -f service.yaml
+ ```
+### Step 7: Configure CI Pipeline Tasks
+1. Add **Maven task** to build:
+ ```bash
+ mvn clean install
+ ```
+2. Add **Trivy scan task**:
+ ```bash
+ trivy fs --format table -o trivy-report.html .
+ ```
+3. Add **Docker tasks**:
+ ```bash
+ docker build -t your-dockerhub-username/boardgame-app .
+ docker push your-dockerhub-username/boardgame-app
+ ```
+### Step 8: Configure SonarQube
+1. Run SonarQube on your VM:
+ ```bash
+ docker run -d --name sonarqube -p 9000:9000 sonarqube
+ ```
+2. Open `http://<VM-IP>:9000` and generate a token.
+3. Add **SonarQube extension** in Azure DevOps and use token + server URL.
+4. Add **Prepare and Analyze** tasks in your pipeline.
+### Step 9: Access Your Deployed App
+1. In Azure Portal:
+ - Go to **AKS > Workloads** and confirm pod status.
+ - Go to **AKS > Ingress** and copy the **external IP**.
+2. Open your app in the browser using that IP.
+## Run Unit Tests Locally
+```bash
+mvn clean test
+```
+## Docker (Local Testing)
+```bash
+docker build -t boardgame-app .
+docker run -p 8080:8080 boardgame-app
+```
+## Project Structure
+src/
+ main/
+ java/
+ resources/
+ webapp/
+ test/
+## Reference Video
+[Watch CI/CD setup on YouTube](https://www.youtube.com/watch?v=0knqjEp3coU)
